@@ -32,7 +32,8 @@ class MediaFunctions
 
 	public function getProxyImageURL( $sha1, $size=600 ): string {
 		if ( $_ENV["IMAGE_CACHE_PREFIX"] == "" ) {
-			return "//" . $_SERVER['SERVER_NAME'] . "/image/{$sha1}/";
+			//	Root-relative, so it works on any host and port (e.g. localhost:8000).
+			return "/image/{$sha1}/";
 		}
 
 		if ( $size == null ) {
