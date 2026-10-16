@@ -118,6 +118,16 @@ You can get all the data, or partial data, from the API.  Data is returned in [g
 
 This is a Symfony PHP and MySQL website. No need for node, complicated deploys, or spinning up containerised virtual machines in the cloud.
 
+### With Docker
+
+```
+docker compose up --build --wait
+```
+
+This serves the site on http://localhost:8000 with the sample database from `/database/`.
+The files it uses are in `/dev/`. All third-party API keys are dummy values, so maps, OCR,
+geocoding and login won't work, and no photos are included.
+
 ### Requirements
 
 * PHP 8.5 or greater.
