@@ -10,6 +10,11 @@ use Doctrine\DBAL\Tools\DsnParser;
 
 class LocationFunctions
 {
+	//	Stadia Maps geocoding, overridable (STADIAMAPS_API_URL) to point at a local stand-in for development.
+	private function getStadiaMapsURL(): string {
+		return rtrim( $_ENV['STADIAMAPS_API_URL'] ?? "https://api-eu.stadiamaps.com", "/" );
+	}
+
 	public function getBoundingBox( string $address_string ): array {
 		$cache = new FilesystemAdapter($_ENV["CACHE"] . "cache_location");
 		//	Cache name is the address string
@@ -18,8 +23,8 @@ class LocationFunctions
 			$item->expiresAfter(3600000);
 
 			//	https://api-eu.stadiamaps.com/geocoding/v1/search?text=Great%20Bedwyn,%20United%20Kingdom&size=1&api_key=abc123
-			$geocode_api_key = $_ENV['STADIAMAPS_API_KEY'];
-			$geocodeAPI = "https://api-eu.stadiamaps.com/geocoding/v1/search?text=" . urlencode($address_string) . "&size=1&api_key={$geocode_api_key}";
+			$geocode_api_key = $_ENV['STADIAMAPS_API_KEY'] ?? "";
+			$geocodeAPI = $this->getStadiaMapsURL() . "/geocoding/v1/search?text=" . urlencode($address_string) . "&size=1&api_key={$geocode_api_key}";
 			$options = array(
 				'http'=> array(
 					'method' => "GET"
@@ -117,19 +122,31 @@ class LocationFunctions
 
 	public function getAddress( $latitude, $longitude ): string {
 		//	https://api-eu.stadiamaps.com/geocoding/v2/reverse?point.lat=51.49634&point.lon=0.13308&api_key=zzzzz
-		$geocode_api_key = $_ENV['STADIAMAPS_API_KEY'];
-		$geocodeAPI = "https://api-eu.stadiamaps.com/geocoding/v2/reverse" . 
+		$geocode_api_key = $_ENV['STADIAMAPS_API_KEY'] ?? "";
+		$geocodeAPI = $this->getStadiaMapsURL() . "/geocoding/v2/reverse" . 
 			"?point.lat=" . $latitude . 
 			"&point.lon=" . $longitude .
 			"&api_key={$geocode_api_key}";
 		$options = array(
 			'http'=> array(
-				'method' => "GET"
+				'method'        => "GET",
+				'ignore_errors' => true,	//	Return error bodies rather than warn, so they can be handled below.
+				'timeout'       => 10,
 			)
 		);
 		$context = stream_context_create($options);
-		$locationJSON = file_get_contents($geocodeAPI, false, $context);
-		$locationData = json_decode($locationJSON);
+		//	A geocoding failure shouldn't stop a bench being added; it just won't have an address.
+		try {
+			$locationJSON = file_get_contents($geocodeAPI, false, $context);
+		} catch (\Throwable $e) {
+			error_log("Reverse geocoding failed: " . $e->getMessage());
+			return "";
+		}
+		$locationData = json_decode($locationJSON ?: "");
+		if ( !isset( $locationData->features[0]->properties->context->whosonfirst ) ) {
+			error_log("Reverse geocoding returned no address for {$latitude},{$longitude}");
+			return "";
+		}
 		
 		//	Construct the address from the Who's On First components.
 		//	https://github.com/whosonfirst/whosonfirst-placetypes#here-is-a-pretty-picture
