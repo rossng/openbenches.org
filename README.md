@@ -110,6 +110,12 @@ You can get all the data, or partial data, from the API.  Data is returned in [g
 * To get the created date, append `&created=true`
 * To get media, append `https://openbenches.org/api/benches?created=true`
 
+#### Address
+* A single bench (`/api/bench/123`) includes its `address`: the place name stored when it was added, from reverse geocoding.
+* For example `"address": "Ladymead Fountain, Bath, Somerset, Bath and North East Somerset, England, United Kingdom"`
+* It is left out when a bench has no stored address.
+* To leave it out, append `?address=false`
+
 ### Tags
 * All available folksonomy tags
 	* `https://openbenches.org/api/tags`

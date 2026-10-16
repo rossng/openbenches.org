@@ -41,13 +41,19 @@ class ApiController extends AbstractController
 		} else {
 			$get_created = true;
 		}
+
+		if ( $request->query->get("address") == "false") {
+			$get_address = false;
+		} else {
+			$get_address = true;
+		}
 		
 		$dsnParser = new DsnParser();
 		$connectionParams = $dsnParser->parse( $_ENV["DATABASE_URL"] );
 		$conn = DriverManager::getConnection($connectionParams);
 
 		//	Inscription
-		$sql = "SELECT `benchID`, `latitude`, `longitude`, `inscription`, `added`
+		$sql = "SELECT `benchID`, `latitude`, `longitude`, `inscription`, `added`, `address`
 		        FROM   `benches`
 				  WHERE  `benchID` =  ?
 				  AND    `published` = true";
@@ -62,6 +68,7 @@ class ApiController extends AbstractController
 			$latitude    = $results_array["latitude"];
 			$longitude   = $results_array["longitude"];
 			$added       = $results_array["added"];
+			$address     = $results_array["address"];
 
 			# Build GeoJSON feature collection array
 			$geojson = array(
@@ -156,6 +163,11 @@ class ApiController extends AbstractController
 				$feature["properties"]["created_at"] = date_format( date_create($added ), "c" );
 			}
 
+			//	The address stored when the bench was added (reverse geocoded), if any
+			if ( $get_address == true && !empty( $address ) ) {
+				$feature["properties"]["address"] = $address;
+			}
+
 			if ( $mediaFeature != null ) {
 				$feature["properties"]["media"] = $mediaFeature;
 			}
@@ -174,7 +186,7 @@ class ApiController extends AbstractController
 				$mergedID = $results_array["mergedID"];
 
 				//	Redirect the API response
-				$redirect_url = "/api/bench/{$mergedID}?truncated=" . json_encode( $get_truncated ) . "&media=" . json_encode( $get_media );
+				$redirect_url = "/api/bench/{$mergedID}?truncated=" . json_encode( $get_truncated ) . "&media=" . json_encode( $get_media ) . "&created=" . json_encode( $get_created ) . "&address=" . json_encode( $get_address );
 				return $this->redirect( $redirect_url, 301 );
 			} else {
 				//	Generate an HTTP 404 response
