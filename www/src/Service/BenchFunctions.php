@@ -286,6 +286,11 @@ class BenchFunctions
 		//	Define the Commentics variables.
 		$cmtx_identifier = "openbenches.org/bench/" . $bench_id;
 
+		//	Without its config, Commentics calls die() and takes the whole page with it.
+		if ( !file_exists( $_SERVER["DOCUMENT_ROOT"] . "/public/commentics/config.php" ) ) {
+			return "";
+		}
+
 		//	Capture the HTML output. This is a *very* ugly hack!
 		ob_start();
 		//	Unset the referrer to prevent Commentics throwing a wobbly.
